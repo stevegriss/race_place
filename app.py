@@ -6,10 +6,16 @@
 # conn.execute('CREATE TABLE students (name TEXT, addr TEXT, city TEXT, pin TEXT)')
 # print("Table created successfully")
 # conn.close()
-import sqlite3 as sql
+import sqlite3
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
+
+
+def db_connection():
+    connection = sqlite3.connect("database.db")
+    connection.row_factory = sqlite3.Row
+    return connection
 
 @app.route('/')
 def home():
@@ -22,37 +28,53 @@ def new_student():
 @app.route('/addrec', methods = ['POST', 'GET'])
 def addrec():
    if request.method == 'POST':
+      nm = request.form['nm']
+      addr = request.form['add']
+      city = request.form['city']
+      pin = request.form['pin']
+
+      db = db_connection()
+
       try:
-         nm = request.form['nm']
-         addr = request.form['add']
-         city = request.form['city']
-         pin = request.form['pin']
-
-         with sql.connect("database.db") as con:
-            cur = con.cursor()
-            cur.execute("INSERT INTO students (name,addr,city,pin) VALUES (?,?,?,?)", (nm,addr,city,pin))
-
-            con.commit()
-            msg = "Record successfully added"
+         db.execute("INSERT INTO students (name,addr,city,pin) VALUES (?,?,?,?)", (nm,addr,city,pin))
+         db.commit()
+         db.close()
+         msg = "Record successfully added"
 
       except:
-         con.rollback()
          msg = "error in insert operation"
 
       finally:
          return render_template("result.html", msg = msg)
-         con.close()
+
+         # with sql.connect("database.db") as con:
+         #    cur = con.cursor()
+         #    cur.execute("INSERT INTO students (name,addr,city,pin) VALUES (?,?,?,?)", (nm,addr,city,pin))
+
+         #    con.commit()
+         #    msg = "Record successfully added"
+
+      # except:
+      #    con.rollback()
+      #    msg = "error in insert operation"
+
+      # finally:
+      #    return render_template("result.html", msg = msg)
+      #    con.close()
 
 @app.route('/list')
 def list():
-   con = sql.connect("database.db")
-   con.row_factory = sql.Row
+   db = db_connection()
+
+   # con = sql.connect("database.db")
+   # con.row_factory = sql.Row
    
-   cur = con.cursor()
-   cur.execute("select * from students")
+   # cur = con.cursor()
+   rows = db.execute("select * from students").fetchall()
    
-   rows = cur.fetchall()
+   # rows = db.fetchall()
    return render_template("list.html", rows = rows)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+   app.run(debug=True)
+   app.run(host="0.0.0.0", port=5000)
